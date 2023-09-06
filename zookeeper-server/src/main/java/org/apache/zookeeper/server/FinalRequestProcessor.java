@@ -121,6 +121,7 @@ public class FinalRequestProcessor implements RequestProcessor {
             ZooTrace.logRequest(LOG, traceMask, 'E', request, "");
         }
 
+        // 处理一些update/create等操作，这里的信息是在PrepRequestProcessor里放进去的
         ProcessTxnResult rc = zks.processTxn(request);
 
         // ZOOKEEPER-558:

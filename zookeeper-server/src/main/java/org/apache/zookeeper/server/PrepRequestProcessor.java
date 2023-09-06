@@ -134,6 +134,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
 
     /**
      * 再次进到run方法里处理submittedRequests队列中的数据
+     * 看起来主要是记录了一些时间信息
      */
     @Override
     public void run() {
@@ -770,6 +771,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         request.setHdr(null);
         request.setTxn(null);
 
+        // 如果是一些变更操作，在这里会获取变更节点的parent和child，更新相关信息
         try {
             switch (request.type) {
             case OpCode.createContainer:

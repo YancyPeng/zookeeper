@@ -1168,6 +1168,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
                 setLocalSessionFlag(si);
+                // 使用链式的processor来处理该request
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();
@@ -1446,9 +1447,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         cnxn.setSessionTimeout(sessionTimeout);
         // We don't want to receive any packets until we are sure that the
         // session is setup
+        // info： 设置当前链接不再可读，即不能连续读，直到返回先，读取《-》返回 一一对应
         cnxn.disableRecv();
         // 如果客户端是首次请求，这里的sessionId为0
         if (sessionId == 0) {
+            // 创建同client的session
             long id = createSession(cnxn, passwd, sessionTimeout);
             LOG.debug(
                 "Client attempting to establish new session: session = 0x{}, zxid = 0x{}, timeout = {}, address = {}",

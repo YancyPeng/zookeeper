@@ -739,9 +739,11 @@ public class NIOServerCnxn extends ServerCnxn {
             return 0;
         }
         int interestOps = 0;
+        // info：在一次读取之后，该selectedKey的read一定是false
         if (getReadInterest()) {
             interestOps |= SelectionKey.OP_READ;
         }
+        //info 终于找到你！在这个地方判断当前NIOServerCNxn中的outgoingBuffer是否为空，不为空则设置成true！意味着 selectionKey.isWritable() 会返回true
         if (getWriteInterest()) {
             interestOps |= SelectionKey.OP_WRITE;
         }

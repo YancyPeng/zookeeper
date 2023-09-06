@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  *
  * The connection layer limit applies backpressure against the TCP connection by
  * disabling selection on connections once the request limit is reached. However,
- * the connection layer always allows a connection to send at least one request
+ * the connection layer always allows a connection to send at least one requestZ
  * before disabling selection on that connection. Thus, in a scenario with 40000
  * client connections, the total number of requests inflight may be as high as
  * 40000 even if the <code>globalOustandingLimit</code> was set lower.
