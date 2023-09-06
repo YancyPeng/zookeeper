@@ -178,6 +178,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUE_TIME.add(startProcessTime - si.syncQueueStartTime);
 
                 // track the number of records written to the log
+                //TODO: 好像没有做什么事情就交给了下一个process，之后再看下
                 if (zks.getZKDatabase().append(si)) {
                     if (shouldSnapshot()) {
                         resetSnapshotStats();
@@ -187,6 +188,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                         if (!snapThreadMutex.tryAcquire()) {
                             LOG.warn("Too busy to snap, skipping");
                         } else {
+                            // 看起来是搞了一个快照
                             new ZooKeeperThread("Snapshot Thread") {
                                 public void run() {
                                     try {
@@ -206,6 +208,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     // flushes (writes), then just pass this to the next
                     // processor
                     if (nextProcessor != null) {
+                        // 交给下一个processor处理
                         nextProcessor.processRequest(si);
                         if (nextProcessor instanceof Flushable) {
                             ((Flushable) nextProcessor).flush();
@@ -275,6 +278,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         Objects.requireNonNull(request, "Request cannot be null");
 
         request.syncQueueStartTime = Time.currentElapsedTime();
+        // 还是一样，放到当前对象的队列中，交给单独的线程去处理，全解耦
         queuedRequests.add(request);
         ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUED.add(1);
     }

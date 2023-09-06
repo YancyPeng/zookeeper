@@ -105,6 +105,10 @@ public class FinalRequestProcessor implements RequestProcessor {
         this.requestPathMetricsCollector = zks.getRequestPathMetricsCollector();
     }
 
+    /**
+     * 看起来finalProcessor是专门用来给客户端一些回复的，附带更新一下session信息，如latency,lastResponseTime,zxid等等
+     * @param request
+     */
     public void processRequest(Request request) {
         LOG.debug("Processing request:: {}", request);
 
@@ -585,9 +589,11 @@ public class FinalRequestProcessor implements RequestProcessor {
         updateStats(request, lastOp, lastZxid);
 
         try {
+            // 如果不是get请求，只需要返回ReplyHeader
             if (path == null || rsp == null) {
                 cnxn.sendResponse(hdr, rsp, "response");
             } else {
+                // 否则需要填充 response 信息
                 int opCode = request.type;
                 Stat stat = null;
                 // Serialized read and get children responses could be cached by the connection

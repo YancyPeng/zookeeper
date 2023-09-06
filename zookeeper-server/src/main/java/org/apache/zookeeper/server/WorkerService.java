@@ -151,6 +151,7 @@ public class WorkerService {
                     workRequest.cleanup();
                     return;
                 }
+                // 真正执行请求读取的地方
                 workRequest.doWork();
             } catch (Exception e) {
                 LOG.warn("Unexpected exception", e);

@@ -177,8 +177,10 @@ public class NIOServerCnxn extends ServerCnxn {
             incomingBuffer.flip();
             packetReceived(4 + incomingBuffer.remaining());
             if (!initialized) {
+                // 读取connect请求
                 readConnectRequest();
             } else {
+                // 读取普通请求
                 readRequest();
             }
             lenBuffer.clear();
@@ -344,6 +346,7 @@ public class NIOServerCnxn extends ServerCnxn {
                         isPayload = true;
                     }
                     if (isPayload) { // not the case for 4letterword
+                        // 处理读请求
                         readPayload();
                     } else {
                         // four letter words take care
@@ -353,6 +356,7 @@ public class NIOServerCnxn extends ServerCnxn {
                 }
             }
             if (k.isWritable()) {
+                // 处理写请求
                 handleWrite(k);
 
                 if (!initialized && !getReadInterest() && !getWriteInterest()) {
