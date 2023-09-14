@@ -81,6 +81,7 @@ public class QuorumMaj implements QuorumVerifier {
         half = votingMembers.size() / 2;
     }
 
+    // info: wc，终于找到这个解析地址的地方了
     public QuorumMaj(Properties props) throws ConfigException {
         for (Entry<Object, Object> entry : props.entrySet()) {
             String key = entry.getKey().toString();
@@ -88,12 +89,15 @@ public class QuorumMaj implements QuorumVerifier {
 
             if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
+                // info: 这里的sid 就是serverId
                 long sid = Long.parseLong(key.substring(dot + 1));
                 QuorumServer qs = new QuorumServer(sid, value);
                 allMembers.put(Long.valueOf(sid), qs);
+                // info : PARTICIPANT 表示参与选举
                 if (qs.type == LearnerType.PARTICIPANT) {
                     votingMembers.put(Long.valueOf(sid), qs);
                 } else {
+                 // info: 否则只是一个观察者，其可以处理集群中的非事务请求，如查询数据等，follower节点太多会导致投票和事务操作慢
                     observingMembers.put(Long.valueOf(sid), qs);
                 }
             } else if (key.equals("version")) {

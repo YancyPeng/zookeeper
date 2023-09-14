@@ -139,9 +139,11 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     private JvmPauseMonitor jvmPauseMonitor;
 
     public static final class AddressTuple {
-
+        // info: server 之间通信使用的地址
         public final MultipleAddresses quorumAddr;
+        //info: server 之间选举使用的地址
         public final MultipleAddresses electionAddr;
+        //info: server 给 client 提供的连接地址
         public final InetSocketAddress clientAddr;
 
         public AddressTuple(MultipleAddresses quorumAddr, MultipleAddresses electionAddr, InetSocketAddress clientAddr) {
@@ -202,16 +204,18 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     public static class QuorumServer {
 
+        //info： server 之间通信用的 ip+port
         public MultipleAddresses addr = new MultipleAddresses();
-
+        //info: 选举时用的 ip + port
         public MultipleAddresses electionAddr = new MultipleAddresses();
-
+        //info: 连接 client 用的 ip + port
         public InetSocketAddress clientAddr = null;
 
         public long id;
 
         public String hostname;
 
+        // info： （server.4=192.168.231.131:2004:3004:observer） 意味着如果不显式设置observer的话，那么默认就是 PARTICIPANT
         public LearnerType type = LearnerType.PARTICIPANT;
 
         public boolean isClientAddrFromStatic = false;
@@ -254,6 +258,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             this.electionAddr.recreateSocketAddresses();
         }
 
+        // info： 判断配置文件中 server 行是否带有observer标识
         private LearnerType getType(String s) throws ConfigException {
             switch (s.trim().toLowerCase()) {
                 case "observer":
@@ -325,6 +330,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                             + "configuration file on server." + sid);
                 }
 
+                // info : (server.4=192.168.231.131:2004:3004:observer) 这种类型的配置
                 if (serverParts.length == 4) {
                     LearnerType tempType = getType(serverParts[3]);
                     if (newType == null) {
@@ -1084,6 +1090,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             LOG.warn("Problem starting AdminServer", e);
             System.out.println(e);
         }
+        // info : 启动leader选举，并且只支持FastLeaderElection算法
         startLeaderElection();
         startJvmPauseMonitor();
         super.start();
@@ -1158,6 +1165,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     }
     public synchronized void startLeaderElection() {
         try {
+            // info： LOOKING 代表当前集群中没有Leader
             if (getPeerState() == ServerState.LOOKING) {
                 currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
             }
@@ -1898,6 +1906,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             if (qv.getVersion() == lastSeenQuorumVerifier.getVersion()) {
                 QuorumPeerConfig.deleteFile(getNextDynamicConfigFilename());
             }
+            // info: 从配置中获取所有的member，包括自己，然后通过myId去获取当前server的ip+port
             QuorumServer qs = qv.getAllMembers().get(getId());
             if (qs != null) {
                 setAddrs(qs.addr, qs.electionAddr, qs.clientAddr);

@@ -59,6 +59,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+/**
+ * 属于是集群的配置类
+ */
 @InterfaceAudience.Public
 public class QuorumPeerConfig {
 
@@ -99,6 +102,7 @@ public class QuorumPeerConfig {
     protected int electionPort = 2182;
     protected boolean quorumListenOnAllIPs = false;
 
+    //info: 读取dataDir目录下的myid文件，在集群启动时每个服务器上都要有
     protected long serverId = UNSET_SERVERID;
 
     protected QuorumVerifier quorumVerifier = null, lastSeenQuorumVerifier = null;
@@ -191,6 +195,7 @@ public class QuorumPeerConfig {
             /* Read entire config file as initial configuration */
             initialConfig = new String(Files.readAllBytes(configFile.toPath()));
 
+            // info : 解析配置！
             parseProperties(cfg);
         } catch (IOException e) {
             throw new ConfigException("Error processing " + path, e);
@@ -447,6 +452,7 @@ public class QuorumPeerConfig {
             dataLogDir = dataDir;
         }
 
+        // info：我们设置的2181
         if (clientPort == 0) {
             LOG.info("clientPort is not set");
             if (clientPortAddress != null) {
@@ -456,6 +462,7 @@ public class QuorumPeerConfig {
             this.clientPortAddress = new InetSocketAddress(InetAddress.getByName(clientPortAddress), clientPort);
             LOG.info("clientPortAddress is {}", formatInetAddr(this.clientPortAddress));
         } else {
+            // info: 没有设置clientPortAddress，那就通过port来生成，结果为：0.0.0.0/0.0.0.0:2181
             this.clientPortAddress = new InetSocketAddress(clientPort);
             LOG.info("clientPortAddress is {}", formatInetAddr(this.clientPortAddress));
         }
@@ -504,10 +511,12 @@ public class QuorumPeerConfig {
         // backward compatibility - dynamic configuration in the same file as
         // static configuration params see writeDynamicConfig()
         if (dynamicConfigFileStr == null) {
+            // info: 原来在这里，终于找到了，解析配置文件中的集群server地址
             setupQuorumPeerConfig(zkProp, true);
             if (isDistributed() && isReconfigEnabled()) {
                 // we don't backup static config for standalone mode.
                 // we also don't backup if reconfig feature is disabled.
+                // info: 备份配置
                 backupOldConfig();
             }
         }
@@ -663,6 +672,7 @@ public class QuorumPeerConfig {
         }
     }
 
+    //info: 解析集群ip地址等信息
     private static QuorumVerifier createQuorumVerifier(Properties dynamicConfigProp, boolean isHierarchical) throws ConfigException {
         if (isHierarchical) {
             return new QuorumHierarchical(dynamicConfigProp);
@@ -701,7 +711,7 @@ public class QuorumPeerConfig {
                 throw new ConfigException("Unrecognised parameter: " + key);
             }
         }
-
+        // info : do parse
         QuorumVerifier qv = createQuorumVerifier(dynamicConfigProp, isHierarchical);
 
         int numParticipators = qv.getVotingMembers().size();
@@ -741,6 +751,7 @@ public class QuorumPeerConfig {
         return qv;
     }
 
+    // info: 读取dataDir目录下的myid文件
     private void setupMyId() throws IOException {
         File myIdFile = new File(dataDir, "myid");
         // standalone server doesn't need myid file.
@@ -763,6 +774,7 @@ public class QuorumPeerConfig {
     }
 
     private void setupClientPort() throws ConfigException {
+        // info: serverId
         if (serverId == UNSET_SERVERID) {
             return;
         }
@@ -927,6 +939,7 @@ public class QuorumPeerConfig {
         return serverId;
     }
 
+    // info: 可以显式的设置 standaloneEnabled 配置，也可以根据参与投票的节点来判断
     public boolean isDistributed() {
         return quorumVerifier != null && (!standaloneEnabled || quorumVerifier.getVotingMembers().size() > 1);
     }

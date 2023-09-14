@@ -179,7 +179,10 @@ public class QuorumPeerMain {
             quorumPeer.enableLocalSessions(config.areLocalSessionsEnabled());
             quorumPeer.enableLocalSessionsUpgrading(config.isLocalSessionsUpgradingEnabled());
             //quorumPeer.setQuorumPeers(config.getAllMembers());
+            // info : 设置选举算法，默认就是FastLeaderElection，并且不支持设置其他值
             quorumPeer.setElectionType(config.getElectionAlg());
+            // info: 设置服务器标识符，读取自dataDir目录下的myid文件，在启动时每个服务器上都要有
+            // info: 选举时，（myid, zxid）首先比较zxid，若一致再比较myid，会投id较大的一方，超过半数即选举成功
             quorumPeer.setMyid(config.getServerId());
             quorumPeer.setTickTime(config.getTickTime());
             quorumPeer.setMinSessionTimeout(config.getMinSessionTimeout());
@@ -191,6 +194,8 @@ public class QuorumPeerMain {
             quorumPeer.setConfigFileName(config.getConfigFilename());
             quorumPeer.setClientPortListenBacklog(config.getClientPortListenBacklog());
             quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
+
+            //info: 把当前集群中的server配置传递给当前启动的这个sever
             quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), false);
             if (config.getLastSeenQuorumVerifier() != null) {
                 quorumPeer.setLastSeenQuorumVerifier(config.getLastSeenQuorumVerifier(), false);
@@ -202,6 +207,7 @@ public class QuorumPeerMain {
             quorumPeer.setUsePortUnification(config.shouldUsePortUnification());
             quorumPeer.setLearnerType(config.getPeerType());
             quorumPeer.setSyncEnabled(config.getSyncEnabled());
+
             quorumPeer.setQuorumListenOnAllIPs(config.getQuorumListenOnAllIPs());
             if (config.sslQuorumReloadCertFiles) {
                 quorumPeer.getX509Util().enableCertFileReloading();
