@@ -105,6 +105,7 @@ public class QuorumPeerConfig {
     //info: 读取dataDir目录下的myid文件，在集群启动时每个服务器上都要有
     protected long serverId = UNSET_SERVERID;
 
+    // info: 保存有集群地址信息
     protected QuorumVerifier quorumVerifier = null, lastSeenQuorumVerifier = null;
     protected int snapRetainCount = 3;
     protected int purgeInterval = 0;
@@ -687,8 +688,10 @@ public class QuorumPeerConfig {
 
     void setupQuorumPeerConfig(Properties prop, boolean configBackwardCompatibilityMode) throws IOException, ConfigException {
         quorumVerifier = parseDynamicConfig(prop, electionAlg, true, configBackwardCompatibilityMode);
+        // info：读取myId文件，设置当前服务器自己的id
         setupMyId();
         setupClientPort();
+        // info ： 设置当前服务器的类型   OBSERVER还是PARTICIPANT
         setupPeerType();
         checkValidity();
     }

@@ -134,6 +134,7 @@ public class QuorumCnxManager {
 
     private int cnxTO = 5000;
 
+    // info：本机的地址信息
     final QuorumPeer self;
 
     /*
@@ -156,13 +157,17 @@ public class QuorumCnxManager {
     /*
      * Mapping from Peer to Thread number
      */
+    // info: 发送器集合，也是每个sid都有一个
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+    // info: 消息发送队列，每个sid都单独存储一份
     final ConcurrentHashMap<Long, BlockingQueue<ByteBuffer>> queueSendMap;
+    // info: 保留最近一次发送给每个 server 的消息
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
     /*
      * Reception queue
      */
+    // info: 从 server 端接受到的消息
     public final BlockingQueue<Message> recvQueue;
 
     /*
@@ -509,6 +514,7 @@ public class QuorumCnxManager {
         }
 
         // If lost the challenge, then drop the new connection
+        // info: 还是要比较 对方的sid和自己的sid大小，但是为什么到这里才进行比较呢？可以把步骤提前很多才对。这样就不需要建立socket了
         if (sid > self.getId()) {
             LOG.info("Have smaller server identifier, so dropping the connection: (myId:{} --> sid:{})", self.getId(), sid);
             closeSocket(sock);
@@ -593,6 +599,7 @@ public class QuorumCnxManager {
 
     }
 
+    // info：当前服务器被动接受连接请求
     private void handleConnection(Socket sock, DataInputStream din) throws IOException {
         Long sid = null, protocolVersion = null;
         MultipleAddresses electionAddr = null;
@@ -634,12 +641,15 @@ public class QuorumCnxManager {
         // do authenticating learner
         authServer.authenticate(sock, din);
         //If wins the challenge, then close the new connection.
+        // info: 因为启动时每台服务器都会向其他服务器发送连接请求，所以总的连接数就是笛卡尔积，但这种会有重复的连接，zookeeper建立的连接规则是：只允许 sid>self.sid 的服务器和自己建立连接，否则就断开当前的连接，自己主动的去和远程服务器建立连接
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
              * up, so we have to shut down the workers before trying to open a
              * new connection.
              */
+            // info: 这种情况的出现场景：该Server曾经连接过，但是因为某种原因挂掉了，现在要重新对该Server进行连接，这里就会把之前的连接给释放掉先
+            // info: 而且这种情况会有一个特殊的逻辑，在重新连接完成后，会向该Server发送最近一次的信息
             SendWorker sw = senderWorkerMap.get(sid);
             if (sw != null) {
                 sw.finish();
@@ -668,12 +678,16 @@ public class QuorumCnxManager {
 
             SendWorker vsw = senderWorkerMap.get(sid);
 
+            // info: 这种情况的出现场景：该Server曾经连接过，但是因为某种原因挂掉了，现在要重新对该Server进行连接，这里就会把之前的连接给释放掉先
+            // info: 而且这种情况会有一个特殊的逻辑，在重新连接完成后，会向该Server发送最近一次的信息
             if (vsw != null) {
                 vsw.finish();
             }
 
+            // info: 发送器集合，也是每个sid都有一个
             senderWorkerMap.put(sid, sw);
 
+            // info：消息发送队列，每个sid都单独存储一份
             queueSendMap.putIfAbsent(sid, new CircularBlockingQueue<>(SEND_CAPACITY));
 
             sw.start();
@@ -689,6 +703,7 @@ public class QuorumCnxManager {
         /*
          * If sending message to myself, then simply enqueue it (loopback).
          */
+        // info：说明是发生给自己的，直接手动添加到Recv队列
         if (this.mySid == sid) {
             b.position(0);
             addToRecvQueue(new Message(b.duplicate(), sid));
@@ -701,6 +716,7 @@ public class QuorumCnxManager {
              */
             BlockingQueue<ByteBuffer> bq = queueSendMap.computeIfAbsent(sid, serverId -> new CircularBlockingQueue<>(SEND_CAPACITY));
             addToSendQueue(bq, b);
+            //info: 和对应的 server 建立连接
             connectOne(sid);
         }
     }
@@ -714,6 +730,7 @@ public class QuorumCnxManager {
      *  @param sid  server id
      *  @return boolean success indication
      */
+    // info: 这里是主动去连接对方，ListenerHandler 那里是等对方来连接自己
     synchronized boolean connectOne(long sid, MultipleAddresses electionAddr) {
         if (senderWorkerMap.get(sid) != null) {
             LOG.debug("There is a connection already for server {}", sid);
@@ -945,6 +962,7 @@ public class QuorumCnxManager {
                 LOG.debug("Listener thread started, myId: {}", self.getId());
                 Set<InetSocketAddress> addresses;
 
+                // info: 读取本机选举用的 ip+port
                 if (self.getQuorumListenOnAllIPs()) {
                     addresses = self.getElectionAddress().getWildcardAddresses();
                 } else {
@@ -1064,6 +1082,7 @@ public class QuorumCnxManager {
                         serverSocket = createNewServerSocket();
                         LOG.info("{} is accepting connections now, my election bind port: {}", QuorumCnxManager.this.mySid, address.toString());
                         while (!shutdown) {
+                            // info: 阻塞性的接受所有投票端口的连接
                             try {
                                 client = serverSocket.accept();
                                 setSockOpts(client);
@@ -1073,6 +1092,7 @@ public class QuorumCnxManager {
                                 // enabled. This is required because sasl server
                                 // authentication process may take few seconds to finish,
                                 // this may delay next peer connection requests.
+                                // info: 接受连接，创建一些sendQueue和 sendWorker
                                 if (quorumSaslAuthEnabled) {
                                     receiveConnectionAsync(client);
                                 } else {
@@ -1129,7 +1149,7 @@ public class QuorumCnxManager {
                 } else {
                     socket = new ServerSocket();
                 }
-
+                // info：启动一个socket，监听的是本机的投票端口
                 socket.setReuseAddress(true);
                 address = new InetSocketAddress(address.getHostString(), address.getPort());
                 socket.bind(address);
@@ -1247,6 +1267,8 @@ public class QuorumCnxManager {
                  * message than that stored in lastMessage. To avoid sending
                  * stale message, we should send the message in the send queue.
                  */
+                // info：sendWorker 在刚启动的时候需要发送上一条发送过的消息，相当细节啊wc
+                // info: 主要是为了解决这一类分布式问题：接收方在接收消息前，或者在接收到消息之后服务器挂掉了，导致消息未被正确的处理。重发的消息由接收方保证幂等
                 BlockingQueue<ByteBuffer> bq = queueSendMap.get(sid);
                 if (bq == null || isSendQueueEmpty(bq)) {
                     ByteBuffer b = lastMessageSent.get(sid);
@@ -1390,6 +1412,7 @@ public class QuorumCnxManager {
                      */
                     final byte[] msgArray = new byte[length];
                     din.readFully(msgArray, 0, length);
+                    // info： 把接收到的数据添加到 RecvQueue 中
                     addToRecvQueue(new Message(ByteBuffer.wrap(msgArray), sid));
                 }
             } catch (Exception e) {

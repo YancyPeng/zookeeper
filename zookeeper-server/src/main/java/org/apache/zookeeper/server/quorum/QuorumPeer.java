@@ -275,6 +275,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             + " where server_config is the pipe separated list of host:port:port or host:port:port:type"
             + " and client_config is port or host:port";
 
+        //info：解析一个server地址，主要是设置选举用的地址，server通信用的地址
         public QuorumServer(long sid, String addressStr) throws ConfigException {
             this.id = sid;
             LearnerType newType = null;
@@ -584,6 +585,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     /**
      * My id
      */
+    // info ： 直接读取的 myid 文件
     private long myid;
 
     /**
@@ -846,6 +848,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     }
 
+    // info: 默认就是 LOOKING 状态
     private ServerState state = ServerState.LOOKING;
 
     private AtomicReference<ZabState> zabState = new AtomicReference<>(ZabState.ELECTION);
@@ -1167,6 +1170,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         try {
             // info： LOOKING 代表当前集群中没有Leader
             if (getPeerState() == ServerState.LOOKING) {
+                // info: 生成当前server的投票信息
                 currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
             }
         } catch (IOException e) {
@@ -1304,6 +1308,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             QuorumCnxManager.Listener listener = qcm.listener;
             if (listener != null) {
                 listener.start();
+
+                // info：启动了两个线程 Sender 和 Receiver，是用来解耦本机内部的数据流转，而不是server之间的，那个在 QuorumCnxManager 类中
                 FastLeaderElection fle = new FastLeaderElection(this, qcm);
                 fle.start();
                 le = fle;
@@ -1442,6 +1448,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                                 shuttingDownLE = false;
                                 startLeaderElection();
                             }
+                            //info: 选举
                             setCurrentVote(makeLEStrategy().lookForLeader());
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);

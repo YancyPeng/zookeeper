@@ -205,6 +205,8 @@ public class QuorumPeerMain {
             quorumPeer.setSecureCnxnFactory(secureCnxnFactory);
             quorumPeer.setSslQuorum(config.isSslQuorum());
             quorumPeer.setUsePortUnification(config.shouldUsePortUnification());
+
+            // info: 设置当前服务器是 PARTICIPANT 还是 OBSERVER
             quorumPeer.setLearnerType(config.getPeerType());
             quorumPeer.setSyncEnabled(config.getSyncEnabled());
 

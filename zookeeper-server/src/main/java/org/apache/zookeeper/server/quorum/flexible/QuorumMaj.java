@@ -104,6 +104,7 @@ public class QuorumMaj implements QuorumVerifier {
                 version = Long.parseLong(value, 16);
             }
         }
+        // info：设置半数，投票时超过半数即认为选举成功
         half = votingMembers.size() / 2;
     }
 
@@ -137,7 +138,9 @@ public class QuorumMaj implements QuorumVerifier {
      * Verifies if a set is a majority. Assumes that ackSet contains acks only
      * from votingMembers
      */
+    // info: 这个方法名起得也太随意了，这么核心的比较逻辑居然用 contains
     public boolean containsQuorum(Set<Long> ackSet) {
+        // info: 判断当前相同的投票是否超过了 votingMembers 的一半
         return (ackSet.size() > half);
     }
 
