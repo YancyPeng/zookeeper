@@ -339,7 +339,7 @@ public class FastLeaderElection implements Election {
                          * If it is from a non-voting server (such as an observer or
                          * a non-voting follower), respond right away.
                          */
-                        // info: 如果是 OBSERVER 节点，就不会放入内部的投票队列，这里直接给返回了，所以 OBSERVER 节点虽然在启动时也会发送选举信息，但是实际上不会影响真正的选举结果
+                        //info: 如果是 OBSERVER 节点，就不会放入内部的投票队列，这里直接给返回了，所以 OBSERVER 节点虽然在启动时也会发送选举信息，但是实际上不会影响真正的选举结果
                         if (!validVoter(response.sid)) {
                             Vote current = self.getCurrentVote();
                             QuorumVerifier qv = self.getQuorumVerifier();
@@ -436,7 +436,7 @@ public class FastLeaderElection implements Election {
                                  * If this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
                                  */
-                                // info：这里处理的就是 我已成为 leader/follower，仍然有节点给我发选举请求
+                                // info：这里的场景 我已成为 leader/follower，仍然有节点给我发选举请求
                                 // info: 1、我启动的比较快，已经和之前的服务器投好了票，选择我为leader，这种情况下不会变更 leader
                                 // info: 2、有服务器宕机，现在重新启动了，这种情况也不会变更 leader
                                 Vote current = self.getCurrentVote();

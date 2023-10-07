@@ -103,9 +103,11 @@ public class Observer extends Learner {
         long connectTime = 0;
         boolean completedSync = false;
         try {
+            // info: 设置当前的 ZAB 状态为 DISCOVERY
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
             QuorumServer master = findLearnerMaster();
             try {
+                //info: 进行 socket 连接
                 connectToLeader(master.addr, master.hostname);
                 connectTime = System.currentTimeMillis();
                 long newLeaderZxid = registerWithLeader(Leader.OBSERVERINFO);
@@ -114,12 +116,15 @@ public class Observer extends Learner {
                 }
 
                 self.setLeaderAddressAndId(master.addr, master.getId());
+                // info: 连接完成之后，设置 ZAB 状态为 SYNCHRONIZATION
                 self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
+                // info: 开始和 leader 进行数据同步
                 syncWithLeader(newLeaderZxid);
                 self.setZabState(QuorumPeer.ZabState.BROADCAST);
                 completedSync = true;
                 QuorumPacket qp = new QuorumPacket();
                 while (this.isRunning() && nextLearnerMaster.get() == null) {
+                    // info: 从 leader 的 input 中读取数据
                     readPacket(qp);
                     processPacket(qp);
                 }

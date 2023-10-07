@@ -70,6 +70,7 @@ import org.slf4j.LoggerFactory;
  * ensemble: Followers and Observers. Both Followers and Observers share
  * a good deal of code which is moved into Peer to avoid duplication.
  */
+// info: followers 和 observers 对 leader 来说都是 leaner
 public class Learner {
 
     static class PacketInFlight {
@@ -396,6 +397,7 @@ public class Learner {
             int remainingTimeout;
             long startNanoTime = nanoTime();
 
+            // info: 最多能尝试连5次
             for (int tries = 0; tries < 5 && socket.get() == null; tries++) {
                 try {
                     // recalculate the init limit time because retries sleep for 1000 milliseconds

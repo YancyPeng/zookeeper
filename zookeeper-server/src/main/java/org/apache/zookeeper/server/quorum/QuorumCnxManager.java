@@ -424,6 +424,8 @@ public class QuorumCnxManager {
      * asynchronously via separate connection thread.
      */
     public boolean initiateConnectionAsync(final MultipleAddresses electionAddr, final Long sid) {
+        // info: 终于找到你，一个线程安全的 set 队列，来保存正在连接中的 sid，这样就能够避免以下这种情况：
+        // info:（1）自己启动时主动连接 (2)收到对方启动时发来的连接，但对方的sid比我小，我再次启动主动连接
         if (!inprogressConnections.add(sid)) {
             // simply return as there is a connection request to
             // server 'sid' already in progress.
@@ -467,6 +469,7 @@ public class QuorumCnxManager {
 
     }
 
+    // info: 主动连接，连接后的操作和下面的 handleConnection 基本一样，就是连接后双方都要 初始化一些 sendWorker recvWorker
     private boolean startConnection(Socket sock, Long sid) throws IOException {
         DataOutputStream dout = null;
         DataInputStream din = null;
@@ -520,6 +523,7 @@ public class QuorumCnxManager {
             closeSocket(sock);
             // Otherwise proceed with the connection
         } else {
+            // info: 成功和其他节点建立连接，开启两个线程，用来和其他节点联系
             LOG.debug("Have larger server identifier, so keeping the connection: (myId:{} --> sid:{})", self.getId(), sid);
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, din, sid, sw);
@@ -703,7 +707,7 @@ public class QuorumCnxManager {
         /*
          * If sending message to myself, then simply enqueue it (loopback).
          */
-        // info：说明是发生给自己的，直接手动添加到Recv队列
+        // info：说明是发送给自己的，直接手动添加到Recv队列
         if (this.mySid == sid) {
             b.position(0);
             addToRecvQueue(new Message(b.duplicate(), sid));
@@ -755,6 +759,7 @@ public class QuorumCnxManager {
      *
      *  @param sid  server id
      */
+    // info: 主动连接对方
     synchronized void connectOne(long sid) {
         if (senderWorkerMap.get(sid) != null) {
             LOG.debug("There is a connection already for server {}", sid);
@@ -762,6 +767,7 @@ public class QuorumCnxManager {
                 // since ZOOKEEPER-3188 we can use multiple election addresses to reach a server. It is possible, that the
                 // one we are using is already dead and we need to clean-up, so when we will create a new connection
                 // then we will choose an other one, which is actually reachable
+                // info: 发现连接已经建立了，直接异步发送消息给对方
                 senderWorkerMap.get(sid).asyncValidateIfSocketIsStillReachable();
             }
             return;

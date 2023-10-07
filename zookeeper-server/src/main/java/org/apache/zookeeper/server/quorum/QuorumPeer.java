@@ -851,6 +851,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     // info: 默认就是 LOOKING 状态
     private ServerState state = ServerState.LOOKING;
 
+    // info: 默认的 ZAB 状态就是 ELECTION
     private AtomicReference<ZabState> zabState = new AtomicReference<>(ZabState.ELECTION);
     private AtomicReference<SyncMode> syncMode = new AtomicReference<>(SyncMode.NONE);
     private AtomicReference<String> leaderAddress = new AtomicReference<String>("");
@@ -1459,7 +1460,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case OBSERVING:
                     try {
                         LOG.info("OBSERVING");
+                        // info: 选举得到结果后，在下一次循环中设置自己为 OBSERVER，并开始对 leader 进行 observe
                         setObserver(makeObserver(logFactory));
+                        // info: 使用的是leader的 addr 地址进行连接
                         observer.observeLeader();
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception", e);
@@ -1479,6 +1482,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     try {
                         LOG.info("FOLLOWING");
                         setFollower(makeFollower(logFactory));
+                        // info: 使用的是leader的 addr 地址进行连接
                         follower.followLeader();
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception", e);
