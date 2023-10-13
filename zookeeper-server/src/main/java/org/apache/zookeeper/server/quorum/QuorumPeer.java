@@ -1094,7 +1094,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             LOG.warn("Problem starting AdminServer", e);
             System.out.println(e);
         }
-        // info : 启动leader选举，并且只支持FastLeaderElection算法
+        // info : 启动leader选举，并且只支持FastLeaderElection算法，在这里各个服务器会开启端口监听，还没有真正开始建立连接
         startLeaderElection();
         startJvmPauseMonitor();
         super.start();
@@ -1308,6 +1308,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             }
             QuorumCnxManager.Listener listener = qcm.listener;
             if (listener != null) {
+                //info: 每个服务器开启端口监听，这里还没开始连接，需要等真正发送消息的时候才会connect
                 listener.start();
 
                 // info：启动了两个线程 Sender 和 Receiver，是用来解耦本机内部的数据流转，而不是server之间的，那个在 QuorumCnxManager 类中

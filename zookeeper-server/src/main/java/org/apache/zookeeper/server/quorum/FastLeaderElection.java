@@ -339,7 +339,8 @@ public class FastLeaderElection implements Election {
                          * If it is from a non-voting server (such as an observer or
                          * a non-voting follower), respond right away.
                          */
-                        //info: 如果是 OBSERVER 节点，就不会放入内部的投票队列，这里直接给返回了，所以 OBSERVER 节点虽然在启动时也会发送选举信息，但是实际上不会影响真正的选举结果
+                        //info: 如果是 OBSERVER 节点，就不会放入内部的投票队列，这里直接给返回了，所以 OBSERVER 节点虽然在启动时也会发送选举信息，但是实际上不会影响真正的选举结果。
+                        //info: 同时，OBSERVER节点也就是通过这里得知当前系统的选举情况的，每个 PARTICIPANT 收到消息后都会把自身的 vote 返回给 OBSERVER
                         if (!validVoter(response.sid)) {
                             Vote current = self.getCurrentVote();
                             QuorumVerifier qv = self.getQuorumVerifier();
@@ -696,7 +697,7 @@ public class FastLeaderElection implements Election {
      * Send notifications to all peers upon a change in our vote
      */
     private void sendNotifications() {
-        // info ： 遍历所有参与投票的节点，包括自己
+        // info ： 遍历所有参与投票的节点，包括自己，不包括 observe 节点
         for (long sid : self.getCurrentAndNextConfigVoters()) {
             QuorumVerifier qv = self.getQuorumVerifier();
             ToSend notmsg = new ToSend(
@@ -994,6 +995,7 @@ public class FastLeaderElection implements Election {
                     /*
                      * Exponential backoff
                      */
+                    // info: timeOut时长 按照指数避退
                     int tmpTimeOut = notTimeout * 2;
                     notTimeout = Math.min(tmpTimeOut, maxNotificationInterval);
                     LOG.info("Notification time out: {}", notTimeout);

@@ -104,6 +104,7 @@ public class Follower extends Learner {
                 try {
                     self.setLeaderAddressAndId(leaderServer.addr, leaderServer.getId());
                     self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
+                    // info: 和leader同步历史数据
                     syncWithLeader(newEpochZxid);
                     self.setZabState(QuorumPeer.ZabState.BROADCAST);
                     completedSync = true;
@@ -121,6 +122,9 @@ public class Follower extends Learner {
                 }
                 // create a reusable packet to reduce gc impact
                 QuorumPacket qp = new QuorumPacket();
+                // info: 死循环
+                // 1.leader进行数据同步
+                // 2.同步完毕后，正常接收leader的请求，并且执行对应的逻辑
                 while (this.isRunning()) {
                     readPacket(qp);
                     processPacket(qp);

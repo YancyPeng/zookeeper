@@ -385,6 +385,7 @@ public class QuorumCnxManager {
                 sock = SOCKET_FACTORY.get();
             }
             setSockOpts(sock);
+            //info：这里如果其他server还没上线，就会报超时错误，于是该 server 在 lookForLeader 那里会 while(true) 空转（但是等待时长是指数避退），等待连接其他server
             sock.connect(electionAddr.getReachableOrOne(), cnxTO);
             if (sock instanceof SSLSocket) {
                 SSLSocket sslSock = (SSLSocket) sock;
@@ -463,6 +464,7 @@ public class QuorumCnxManager {
             try {
                 initiateConnection(electionAddr, sid);
             } finally {
+                //info: 不管这次能否连接成功，都将这个记录删掉，下次重新连
                 inprogressConnections.remove(sid);
             }
         }

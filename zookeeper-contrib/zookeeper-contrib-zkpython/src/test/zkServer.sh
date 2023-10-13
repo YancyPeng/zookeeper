@@ -86,7 +86,7 @@ start|startClean)
     ./gencerts.sh
     cd -
 
-    sed "s#WORKDIR#${WORK_DIR}#g" ${TEST_DIR}/zoo.cfg > "${WORK_DIR}/zoo.cfg"
+    sed "s#WORKDIR#${WORK_DIR}#g" ${TEST_DIR}/zoo1.cfg > "${WORK_DIR}/zoo.cfg"
     java  -Dzookeeper.extendedTypesEnabled=true -Dznode.container.checkIntervalMs=100 -cp $CLASSPATH org.apache.zookeeper.server.ZooKeeperServerMain "${WORK_DIR}/zoo.cfg" &> "${WORK_DIR}/zoo.log" &
     pid=$!
     echo -n $! > ${WORK_DIR}/../zk.pid

@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  * ensemble: Followers and Observers. Both Followers and Observers share
  * a good deal of code which is moved into Peer to avoid duplication.
  */
-// info: followers 和 observers 对 leader 来说都是 leaner
+//info: followers 和 observers 对 leader 来说都是 leaner
 public class Learner {
 
     static class PacketInFlight {
@@ -339,9 +339,10 @@ public class Learner {
         }
 
         self.authLearner.authenticate(sock, hostname);
-
+        // info: leader发送过来的信息
         leaderIs = BinaryInputArchive.getArchive(new BufferedInputStream(sock.getInputStream()));
         bufferedOutput = new BufferedOutputStream(sock.getOutputStream());
+        // info: 发送给leader的信息
         leaderOs = BinaryOutputArchive.getArchive(bufferedOutput);
         if (asyncSending) {
             startSendingThread();

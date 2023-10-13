@@ -27,6 +27,7 @@ public class ZxidUtils {
         return zxid & 0xffffffffL;
     }
     public static long makeZxid(long epoch, long counter) {
+        // info: 这里很好地说明说明了 zxid 和 epoch的关系，zxid 的高32位就是epoch
         return (epoch << 32L) | (counter & 0xffffffffL);
     }
     public static String zxidToString(long zxid) {
