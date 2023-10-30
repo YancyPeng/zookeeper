@@ -89,6 +89,7 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
 
     @Override
     public synchronized void startup() {
+        // info：和单机版一样，启动 session 管理器，processor 等
         super.startup();
         if (containerManager != null) {
             containerManager.start();

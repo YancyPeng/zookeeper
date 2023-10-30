@@ -263,6 +263,7 @@ public class Learner {
         // Find the leader by id
         Vote current = self.getCurrentVote();
         for (QuorumServer s : self.getView().values()) {
+            // info： 根据自己的投票，遍历自己的配置表，找到 leader 的 address
             if (s.id == current.getId()) {
                 // Ensure we have the leader's correct IP address before
                 // attempting to connect.
@@ -490,6 +491,8 @@ public class Learner {
         boa.writeRecord(li, "LearnerInfo");
         qp.setData(bsid.toByteArray());
 
+        // info: 真有这么快？刚发送完就去读数据，看起来也完全没有 wait
+        // info: inputStream 读取就是阻塞的，所以这里没啥问题
         writePacket(qp, true);
         readPacket(qp);
         final long newEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
@@ -513,10 +516,12 @@ public class Learner {
                                       + " is less than accepted epoch, "
                                       + self.getAcceptedEpoch());
             }
+            // info：收到 LeaderINFO 之后要返回一个 ACK，把自身最后一个 zxId 发给Leader，由leader判断是否应该执行 删除 或者是 同步 操作
             QuorumPacket ackNewEpoch = new QuorumPacket(Leader.ACKEPOCH, lastLoggedZxid, epochBytes, null);
             writePacket(ackNewEpoch, true);
             return ZxidUtils.makeZxid(newEpoch, 0);
         } else {
+            // TODO：暂不清楚什么时候会调到这里，发给了一个不是 leader 的server？
             if (newEpoch > self.getAcceptedEpoch()) {
                 self.setAcceptedEpoch(newEpoch);
             }
@@ -550,6 +555,7 @@ public class Learner {
         Deque<Long> packetsCommitted = new ArrayDeque<>();
         Deque<PacketInFlight> packetsNotCommitted = new ArrayDeque<>();
         synchronized (zk) {
+            // info：LEADER 根据 zxId 判断和 leader 是否存在数据不一致
             if (qp.getType() == Leader.DIFF) {
                 LOG.info("Getting a diff from the leader 0x{}", Long.toHexString(qp.getZxid()));
                 self.setSyncMode(QuorumPeer.SyncMode.DIFF);
@@ -561,10 +567,13 @@ public class Learner {
                     snapshotNeeded = false;
                 }
             } else if (qp.getType() == Leader.SNAP) {
+                // info: 快照，暂时不知道 Leader 什么时候调用
+                // info: 在 learner 的 zxid 小于 leader 的最小 zxid 时使用
                 self.setSyncMode(QuorumPeer.SyncMode.SNAP);
                 LOG.info("Getting a snapshot from leader 0x{}", Long.toHexString(qp.getZxid()));
                 // The leader is going to dump the database
                 // db is clear as part of deserializeSnapshot()
+                // info：清空本地的 database，使用 leader 发送过来的快照重新反序列化
                 zk.getZKDatabase().deserializeSnapshot(leaderIs);
                 // ZOOKEEPER-2819: overwrite config node content extracted
                 // from leader snapshot with local config, to avoid potential
@@ -573,6 +582,7 @@ public class Learner {
                     LOG.debug("Reset config node content from local config after deserialization of snapshot.");
                     zk.getZKDatabase().initConfigInZKDatabase(self.getQuorumVerifier());
                 }
+                // info: 这个签名是彩蛋吗？
                 String signature = leaderIs.readString("signature");
                 if (!signature.equals("BenWasHere")) {
                     LOG.error("Missing signature. Got {}", signature);
@@ -583,9 +593,11 @@ public class Learner {
                 // immediately persist the latest snapshot when there is txn log gap
                 syncSnapshot = true;
             } else if (qp.getType() == Leader.TRUNC) {
+                // info： 截断本地的日志，截断后重新加载到内存中（说明本地的 zxId > leader.zxId
                 //we need to truncate the log to the lastzxid of the leader
                 self.setSyncMode(QuorumPeer.SyncMode.TRUNC);
                 LOG.warn("Truncating log to get in sync with the leader 0x{}", Long.toHexString(qp.getZxid()));
+                // info：使用 leader 传过来的 maxCommittedLog 进行 trunc
                 boolean truncated = zk.getZKDatabase().truncateLog(qp.getZxid());
                 if (!truncated) {
                     // not able to truncate the log
@@ -612,6 +624,7 @@ public class Learner {
             boolean writeToTxnLog = !snapshotNeeded;
             TxnLogEntry logEntry;
             // we are now going to start getting transactions to apply followed by an UPTODATE
+            // info: 这里就是接受 leader 传过来的 DIFF 数据来更新本地的数据库，一条一条更新，所以需要一个 while 循环
             outerLoop:
             while (self.isRunning()) {
                 readPacket(qp);
@@ -721,6 +734,9 @@ public class Learner {
                     self.setZooKeeperServer(zk);
                     self.adminServer.setZooKeeperServer(zk);
                     break outerLoop;
+
+
+                    // info：NEWLEADER 是 leader 数据同步的最后一条消息，下一条消息就是 UPTODATE，就会跳出这个 while 循环
                 case Leader.NEWLEADER: // Getting NEWLEADER here instead of in discovery
                     // means this is Zab 1.0
                     LOG.info("Learner received NEWLEADER message");
@@ -746,6 +762,7 @@ public class Learner {
                     // ZOOKEEPER-3911: make sure sync the uncommitted logs before commit them (ACK NEWLEADER).
                     sock.setSoTimeout(self.tickTime * self.syncLimit);
                     self.setSyncMode(QuorumPeer.SyncMode.NONE);
+                    // info：启动 processor、session 管理器，为接下来服务 client 做准备
                     zk.startupWithoutServing();
                     if (zk instanceof FollowerZooKeeperServer) {
                         FollowerZooKeeperServer fzk = (FollowerZooKeeperServer) zk;

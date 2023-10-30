@@ -506,6 +506,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
 
         // Clean up dead sessions
+        // info：清除快照里保存的之前的 session 信息
         List<Long> deadSessions = new ArrayList<>();
         for (Long session : zkDb.getSessions()) {
             if (zkDb.getSessionWithTimeOuts().get(session) == null) {
@@ -519,6 +520,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
 
         // Make a clean snapshot
+        // info: 清除完之后准备从快照恢复数据
         takeSnapshot();
     }
 
@@ -685,6 +687,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         startupWithServerState(State.RUNNING);
     }
 
+    // info：给 learner 用的（包括 Follower / Observer）
     public synchronized void startupWithoutServing() {
         startupWithServerState(State.INITIAL);
     }
@@ -698,13 +701,13 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         if (sessionTracker == null) {
             createSessionTracker();
         }
-        // 启动会话管理器
+        //info: 启动会话管理器
         startSessionTracker();
 
-        // 请求处理器，责任链模式
+        //info: 请求处理器，责任链模式
         setupRequestProcessors();
 
-        // 请求处理线程
+        //info: 请求处理线程
         startRequestThrottler();
 
         registerJMX();
@@ -735,7 +738,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
 
     /**
-     * 整个zookeeper的请求处理链，从左到右依次为：PrepRequestProcessor->SyncRequestProcessor->FinalRequestProcessor
+     * info: 整个zookeeper的请求处理链，从左到右依次为：PrepRequestProcessor->SyncRequestProcessor->FinalRequestProcessor
      */
     protected void setupRequestProcessors() {
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
@@ -999,7 +1002,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         to.putInt(timeout);
         cnxn.setSessionId(sessionId);
         Request si = new Request(cnxn, sessionId, 0, OpCode.createSession, to, null);
-        // 把connect请求也放入队列中
+        //info： 把connect请求也放入队列中
         submitRequest(si);
         return sessionId;
     }
@@ -1141,7 +1144,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
 
     /**
-     * 开始使用 PrepRequestProcessor 等处理器来处理request
+     * info: 开始使用 PrepRequestProcessor 等处理器来处理request
      * @param si
      */
     public void submitRequestNow(Request si) {
@@ -1168,7 +1171,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
                 setLocalSessionFlag(si);
-                // 使用链式的processor来处理该request
+                // info: 使用链式的processor来处理该request
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();
@@ -1449,7 +1452,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // session is setup
         // info： 设置当前链接不再可读，即不能连续读，直到返回先，读取《-》返回 一一对应
         cnxn.disableRecv();
-        // 如果客户端是首次请求，这里的sessionId为0
+        // info: 如果客户端是首次请求，这里的sessionId为0
         if (sessionId == 0) {
             // 创建同client的session
             long id = createSession(cnxn, passwd, sessionTimeout);
@@ -1460,7 +1463,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 connReq.getTimeOut(),
                 cnxn.getRemoteSocketAddress());
         } else {
-            // 如果不是0，说明之前已经分配过了，由于某种原因断开了连接，现在进行重连
+            // info: 如果不是0，说明之前已经分配过了，由于某种原因断开了连接，现在进行重连
             long clientSessionId = connReq.getSessionId();
                 LOG.debug(
                     "Client attempting to renew session: session = 0x{}, zxid = 0x{}, timeout = {}, address = {}",

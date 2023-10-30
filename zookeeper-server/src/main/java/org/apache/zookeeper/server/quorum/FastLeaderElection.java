@@ -984,6 +984,7 @@ public class FastLeaderElection implements Election {
                  * Sends more notifications if haven't received enough.
                  * Otherwise processes new notification.
                  */
+                // info： 如果其他的server都没有上线，这里也是null，于是下面的 timeOut 值就起作用了
                 if (n == null) {
                     if (manager.haveDelivered()) {
                         sendNotifications();
@@ -1050,6 +1051,7 @@ public class FastLeaderElection implements Election {
                         // info: 记录一下这次对方的投票
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
 
+                        // info: 获取和当前我的Vote相同的 server
                         voteSet = getVoteTracker(recvset, new Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch));
 
                         // info: 这个名字太混淆了，其实并不是判断是否包含所有，只要超过 half votingMember 值就可以了

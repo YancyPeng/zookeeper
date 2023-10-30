@@ -84,8 +84,10 @@ public class Follower extends Learner {
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
             QuorumServer leaderServer = findLeader();
             try {
+                // info：建立连接
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
                 connectionTime = System.currentTimeMillis();
+                // info: 向 Leader 注册 Follower，发送 ACK 时会带有自己的 zxid，用以下面的数据同步
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
                 if (self.isReconfigStateChange()) {
                     throw new Exception("learned about role change");
@@ -122,7 +124,7 @@ public class Follower extends Learner {
                 }
                 // create a reusable packet to reduce gc impact
                 QuorumPacket qp = new QuorumPacket();
-                // info: 死循环
+                // info: 这个 socket 是用来和 leader 进行通信的，不是和 client 通信
                 // 1.leader进行数据同步
                 // 2.同步完毕后，正常接收leader的请求，并且执行对应的逻辑
                 while (this.isRunning()) {
@@ -130,6 +132,7 @@ public class Follower extends Learner {
                     processPacket(qp);
                 }
             } catch (Exception e) {
+                // info: 如果 learner 本身网络不行，会在这里抛出异常，结束 following 状态
                 LOG.warn("Exception when following the leader", e);
                 closeSocket();
 

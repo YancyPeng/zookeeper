@@ -771,7 +771,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         request.setHdr(null);
         request.setTxn(null);
 
-        // 如果是一些变更操作，在这里会获取变更节点的parent和child，更新相关信息
+        //info: 如果是一些变更操作，在这里会获取变更节点的parent和child，更新相关信息
         try {
             switch (request.type) {
             case OpCode.createContainer:
@@ -948,7 +948,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         }
         request.zxid = zks.getZxid();
         ServerMetrics.getMetrics().PREP_PROCESS_TIME.add(Time.currentElapsedTime() - request.prepStartTime);
-        // 交给下一个processor处理
+        //info: 交给下一个processor处理
         nextProcessor.processRequest(request);
     }
 
@@ -1047,7 +1047,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
 
     public void processRequest(Request request) {
         request.prepQueueStartTime = Time.currentElapsedTime();
-        // zookeeper中对request的处理总结就两个点：把事件加入到各种不同的队列，每个队列都有对应的Thread去取数，然后执行相关处理逻辑
+        //info: zookeeper中对request的处理总结就两个点：把事件加入到各种不同的队列，每个队列都有对应的Thread去取数，然后执行相关处理逻辑
         submittedRequests.add(request);
         ServerMetrics.getMetrics().PREP_PROCESSOR_QUEUED.add(1);
     }

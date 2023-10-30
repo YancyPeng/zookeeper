@@ -490,6 +490,7 @@ public class Leader extends LearnerMaster {
                     Thread.currentThread().setName("LearnerCnxAcceptorHandler-" + serverSocket.getLocalSocketAddress());
 
                     while (!stop.get()) {
+                        // info: 循环接收连接
                         acceptConnections();
                     }
                 } catch (Exception e) {
@@ -515,6 +516,7 @@ public class Leader extends LearnerMaster {
                     socket.setTcpNoDelay(nodelay);
 
                     BufferedInputStream is = new BufferedInputStream(socket.getInputStream());
+                    // info：并且为每一个 learner 都创建了一个 LeaderHandler
                     LearnerHandler fh = new LearnerHandler(socket, is, Leader.this);
                     fh.start();
                 } catch (SocketException e) {
@@ -587,15 +589,18 @@ public class Leader extends LearnerMaster {
         try {
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
             self.tick.set(0);
+            // info: 从快照恢复数据
             zk.loadData();
 
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from
             // new followers.
+            // info：创建一个线程，接收 Follower/Observer的链接
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
 
+            //info: 这里会阻塞，等到超过一半的 learner 连接到 leader
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
 
             zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
@@ -682,6 +687,7 @@ public class Leader extends LearnerMaster {
                 return;
             }
 
+            // info: 启动一些 client 请求的处理线程
             startZkServer();
 
             /**
@@ -761,6 +767,7 @@ public class Leader extends LearnerMaster {
                         break;
                     }
 
+                    // info: 统计没有超时的 learner，并且看是否低于 1/2 ，低于就跳出当前的循环，跳出循环就意味着要 shutdown，重新选举了
                     if (!tickSkip && !syncedAckSet.hasAllQuorums()) {
                         // Lost quorum of last committed and/or last proposed
                         // config, set shutdown flag
@@ -771,6 +778,7 @@ public class Leader extends LearnerMaster {
                     }
                     tickSkip = !tickSkip;
                 }
+                // info: 循环 ping
                 for (LearnerHandler f : getLearners()) {
                     f.ping();
                 }
@@ -1402,6 +1410,7 @@ public class Leader extends LearnerMaster {
             if (!waitingForNewEpoch) {
                 return epoch;
             }
+            // info: 更新 epoch，也就是每次重新选举后这里的 epoch 需要+1；
             if (lastAcceptedEpoch >= epoch) {
                 epoch = lastAcceptedEpoch + 1;
             }
@@ -1409,11 +1418,14 @@ public class Leader extends LearnerMaster {
                 connectingFollowers.add(sid);
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
+            // info: connectingFollower > half 才为 true
             if (connectingFollowers.contains(self.getId()) && verifier.containsQuorum(connectingFollowers)) {
                 waitingForNewEpoch = false;
                 self.setAcceptedEpoch(epoch);
+                // info: 为true之后，会从 wait 队列唤醒等待的线程
                 connectingFollowers.notifyAll();
             } else {
+                // info: 如果没超过，就要在这里超时等待
                 long start = Time.currentElapsedTime();
                 if (sid == self.getId()) {
                     timeStartWaitForEpoch = start;
@@ -1527,6 +1539,7 @@ public class Leader extends LearnerMaster {
         }
 
         leaderStartTime = Time.currentElapsedTime();
+        // info：启动 processor
         zk.startup();
         /*
          * Update the election vote here to ensure that all members of the

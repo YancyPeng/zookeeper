@@ -1087,6 +1087,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
         loadDataBase();
+        // info: 启动接受 client 连接和其他请求的 socket，怎么比选举还要早？
         startServerCnxnFactory();
         try {
             adminServer.start();
@@ -1490,6 +1491,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     } finally {
                         follower.shutdown();
                         setFollower(null);
+                        // info: 重置 PeerState 为 LOOKING
                         updateServerState();
                     }
                     break;
@@ -1497,7 +1499,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     LOG.info("LEADING");
                     try {
                         setLeader(makeLeader(logFactory));
+                        // info:这里也是死循环
+                        // 1. 接受 Follower 的连接
+                        // 2. 进行 Follower 的数据同步
+                        // 3. 同步完成后，正常接收请求（主要包括 客户端发来的请求、集群Follower转发的事务请求）
                         leader.lead();
+
+                        // info: 如果集群超过半数服务器宕机，那么首先设置 leader 为 null
                         setLeader(null);
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception", e);
@@ -1529,6 +1537,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     private synchronized void updateServerState() {
         if (!reconfigFlag) {
+            // info: 崩溃后重新设置为 LOOKING 状态
             setPeerState(ServerState.LOOKING);
             LOG.warn("PeerState set to LOOKING");
             return;

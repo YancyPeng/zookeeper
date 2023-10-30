@@ -278,7 +278,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         Objects.requireNonNull(request, "Request cannot be null");
 
         request.syncQueueStartTime = Time.currentElapsedTime();
-        // 还是一样，放到当前对象的队列中，交给单独的线程去处理，全解耦
+        //info: 还是一样，放到当前对象的队列中，交给单独的线程去处理，全解耦
         queuedRequests.add(request);
         ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUED.add(1);
     }

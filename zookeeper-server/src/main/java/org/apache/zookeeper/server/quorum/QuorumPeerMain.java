@@ -166,6 +166,7 @@ public class QuorumPeerMain {
 
             if (config.getClientPortAddress() != null) {
                 cnxnFactory = ServerCnxnFactory.createFactory();
+                // info: 集群版的在这里设置监听 client 连接请求的 socket
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), false);
             }
 
