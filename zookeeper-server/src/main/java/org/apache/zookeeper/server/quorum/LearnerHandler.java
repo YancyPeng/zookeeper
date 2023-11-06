@@ -633,6 +633,7 @@ public class LearnerHandler extends ZooKeeperThread {
 
             LOG.debug("Received NEWLEADER-ACK message from {}", sid);
 
+            // info: 这里也是要等超过一般的 Learner 返回 ACK
             learnerMaster.waitForNewLeaderAck(getSid(), qp.getZxid());
 
             syncLimitCheck.start();
@@ -662,6 +663,8 @@ public class LearnerHandler extends ZooKeeperThread {
             queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
 
             // info：从这里开始结束所有的启动前工作（选举+同步），正式开始对外提供服务
+            // info：这里应该只是处理 learnerHandler 发送过来的消息，client 的消息处理不在这里
+            // info：问题，在选举-同步流程还没结束前，接收到了 client 发来的请求怎么处理？
             while (true) {
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");

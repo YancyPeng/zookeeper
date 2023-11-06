@@ -162,11 +162,13 @@ public class Follower extends Learner {
      * @param qp
      * @throws IOException
      */
+    // info: 在这里处理 leader 发送过来的消息
     protected void processPacket(QuorumPacket qp) throws Exception {
         switch (qp.getType()) {
         case Leader.PING:
             ping(qp);
             break;
+            // info: 接收到 leader 的提议
         case Leader.PROPOSAL:
             ServerMetrics.getMetrics().LEARNER_PROPOSAL_RECEIVED_COUNT.add(1);
             TxnLogEntry logEntry = SerializeUtils.deserializeTxn(qp.getData());
@@ -186,7 +188,7 @@ public class Follower extends Learner {
                 QuorumVerifier qv = self.configFromString(new String(setDataTxn.getData()));
                 self.setLastSeenQuorumVerifier(qv, true);
             }
-
+            // info: 这里进行事务日志处理，处理完成后发送 ACK 给 leader，处理链是 SyncRequestProcessor -> SendAckRequestProcessor
             fzk.logRequest(hdr, txn, digest);
             if (hdr != null) {
                 /*
@@ -207,7 +209,9 @@ public class Follower extends Learner {
             }
             break;
         case Leader.COMMIT:
+            //info: 当 leader 发送的提议收到了足够的 ack 之后，会向各 follower 发送 commit，follower 的处理链条是 CommitProcessor -> FinalRequestProcessor
             ServerMetrics.getMetrics().LEARNER_COMMIT_RECEIVED_COUNT.add(1);
+            // info：commit 的时候只用了一个  zxId 字段，是在 commit 那一步就保存了
             fzk.commit(qp.getZxid());
             if (om != null) {
                 final long startTime = Time.currentElapsedTime();

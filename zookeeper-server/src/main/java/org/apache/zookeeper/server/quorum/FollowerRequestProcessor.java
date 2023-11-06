@@ -72,6 +72,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 // We want to queue the request to be processed before we submit
                 // the request to the leader so that we are ready to receive
                 // the response
+                // info: 写请求先存起来，等 leader 的commit，然后再给下一个 processor
                 nextProcessor.processRequest(request);
 
                 // We now ship the request to the leader. As with all
@@ -95,6 +96,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 case OpCode.setACL:
                 case OpCode.multi:
                 case OpCode.check:
+                    // info: 对于事务类型的请求，直接交由 leader 处理，原来在这里
                     zks.getFollower().request(request);
                     break;
                 case OpCode.createSession:
@@ -139,7 +141,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                     queuedRequests.add(upgradeRequest);
                 }
             }
-
+            // info: 放入 queuedRequests 队列，后续通过 run() 方法调用执行
             queuedRequests.add(request);
         }
     }

@@ -739,6 +739,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
 
     /**
      * info: 整个zookeeper的请求处理链，从左到右依次为：PrepRequestProcessor->SyncRequestProcessor->FinalRequestProcessor
+     *
+     * // info：默认是单机版的处理器链，集群版的和这个不太一样，并且集群版还分为 leader 和 follower/observer
      */
     protected void setupRequestProcessors() {
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
@@ -1129,6 +1131,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     // processor it should wait for setting up the request
                     // processor chain. The state will be updated to RUNNING
                     // after the setup.
+                    // info: 哦！如果当前的state不是running，那么就会在这里无限的wait住，导致请求被阻塞在 processor 处
                     while (state == State.INITIAL) {
                         wait(1000);
                     }
@@ -1454,7 +1457,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         cnxn.disableRecv();
         // info: 如果客户端是首次请求，这里的sessionId为0
         if (sessionId == 0) {
-            // 创建同client的session
+            //info: 创建同client的session
             long id = createSession(cnxn, passwd, sessionTimeout);
             LOG.debug(
                 "Client attempting to establish new session: session = 0x{}, zxid = 0x{}, timeout = {}, address = {}",
@@ -1664,7 +1667,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         } else if (h.getType() == OpCode.sasl) {
             processSasl(incomingBuffer, cnxn, h);
         } else {
-            // 普通请求
+            //info: 普通请求，普通请求如果当前选举还未完成 那么就会阻塞住
             if (shouldRequireClientSaslAuth() && !hasCnxSASLAuthenticated(cnxn)) {
                 ReplyHeader replyHeader = new ReplyHeader(h.getXid(), 0, Code.SESSIONCLOSEDREQUIRESASLAUTH.intValue());
                 cnxn.sendResponse(replyHeader, null, "response");
@@ -1679,7 +1682,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     si.setLargeRequestSize(length);
                 }
                 si.setOwner(ServerCnxn.me);
-                // 把请求放入队列中
+                //info: 把请求放入队列中
                 submitRequest(si);
             }
         }

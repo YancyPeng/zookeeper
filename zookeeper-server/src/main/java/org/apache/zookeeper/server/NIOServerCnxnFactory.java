@@ -380,7 +380,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             try {
                 while (!stopped) {
                     try {
-                        //info: 收集接受到的数据
+                        //info: 收集接受到的数据，什么都没注册，第一条数据从哪儿来？
                         select();
                         //info: 处理连接请求
                         processAcceptedConnections();
@@ -452,6 +452,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
          */
         private void handleIO(SelectionKey key) {
             IOWorkRequest workRequest = new IOWorkRequest(this, key);
+            // info: 获取这个 key 对应的 NIOServerCnxn，可以里面包含 client 连接信息
             NIOServerCnxn cnxn = (NIOServerCnxn) key.attachment();
 
             // Stop selecting this key while processing on its
@@ -476,6 +477,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                 try {
                     // info：注册通道，并设置感兴趣的操作，这里首先设置为read操作，表明对监听该channel的Read操作感兴趣，在select的时候会判断是否可读
                     key = accepted.register(selector, SelectionKey.OP_READ);
+                    // info: 为每一个 client 都建立一个 NIOServerCnxn
                     NIOServerCnxn cnxn = createConnection(accepted, key, this);
                     key.attach(cnxn);
                     addCnxn(cnxn);
@@ -529,7 +531,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             }
 
             if (key.isReadable() || key.isWritable()) {
-                // 读取当前请求的io
+                //info: 读取当前请求的io
                 cnxn.doIO(key);
 
                 // Check if we shutdown or doIO() closed this connection
@@ -691,7 +693,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             ss.socket().bind(addr, listenBacklog);
         }
         ss.configureBlocking(false);
-        // info: 这里只是 new 了一个 Accept 线程，并没有 run 起来
+        // info: 这里只是 new 了一个 Accept 线程，并没有 run 起来，默认注册了 OP_ACCEPT 操作
         acceptThread = new AcceptThread(ss, addr, selectorThreads);
     }
 

@@ -177,10 +177,10 @@ public class NIOServerCnxn extends ServerCnxn {
             incomingBuffer.flip();
             packetReceived(4 + incomingBuffer.remaining());
             if (!initialized) {
-                // 读取connect请求
+                //info: 读取connect请求
                 readConnectRequest();
             } else {
-                // 读取普通请求
+                //info: 读取普通请求
                 readRequest();
             }
             lenBuffer.clear();
@@ -346,7 +346,9 @@ public class NIOServerCnxn extends ServerCnxn {
                         isPayload = true;
                     }
                     if (isPayload) { // not the case for 4letterword
-                        // 处理读请求
+                        //info: 处理读/connect请求，如果此时集群内部选举尚未完成，会有两种情况：
+                        //1: connect请求：直接抛异常，这次请求就丢掉了
+                        //2：读请求：会在进入processor前阻塞，while(true)无限等待
                         readPayload();
                     } else {
                         // four letter words take care
@@ -356,7 +358,7 @@ public class NIOServerCnxn extends ServerCnxn {
                 }
             }
             if (k.isWritable()) {
-                // 处理写请求
+                //info: 处理写请求
                 handleWrite(k);
 
                 if (!initialized && !getReadInterest() && !getWriteInterest()) {
@@ -425,6 +427,7 @@ public class NIOServerCnxn extends ServerCnxn {
     }
 
     private void readConnectRequest() throws IOException, InterruptedException, ClientCnxnLimitException {
+        // info: 来的是一个连接请求，但此时选举还未结束，这里就会抛异常
         if (!isZKServerRunning()) {
             throw new IOException("ZooKeeperServer not running");
         }

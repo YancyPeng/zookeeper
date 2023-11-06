@@ -123,7 +123,9 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
      * set, flush only when the relevant condition is hit.
      */
     private boolean shouldFlush() {
+        // info：默认是 0
         long flushDelay = zks.getFlushDelay();
+        // info：默认是 1000
         long maxBatchSize = zks.getMaxBatchSize();
         if ((flushDelay > 0) && (getRemainingDelay() == 0)) {
             return true;
@@ -166,6 +168,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 Request si = queuedRequests.poll(pollTime, TimeUnit.MILLISECONDS);
                 if (si == null) {
                     /* We timed out looking for more writes to batch, go ahead and flush immediately */
+                    // info：这里也可以刷新，就是等下一次 poll 没有数据的时候，说明已经到头了，现在就 flush，否则的话就需要等很久，满足条件了才行
                     flush();
                     si = queuedRequests.take();
                 }
@@ -178,7 +181,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUE_TIME.add(startProcessTime - si.syncQueueStartTime);
 
                 // track the number of records written to the log
-                //TODO: 好像没有做什么事情就交给了下一个process，之后再看下
+                //TODO: 好像没有做什么事情就交给了下一个process，主要是将当前请求进行事务日志保存
                 if (zks.getZKDatabase().append(si)) {
                     if (shouldSnapshot()) {
                         resetSnapshotStats();
@@ -216,6 +219,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     }
                     continue;
                 }
+                // info: 先缓存起来，之后一把操作，那岂不是 leader 很久才能收到 ack ？
                 toFlush.add(si);
                 if (shouldFlush()) {
                     flush();

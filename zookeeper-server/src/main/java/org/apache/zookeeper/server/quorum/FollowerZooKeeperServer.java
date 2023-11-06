@@ -66,11 +66,13 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
         return self.follower;
     }
 
+    //info: follower 的处理器链， SyncRequestProcessor -> SendAckRequestProcessor, FollowerRequestProcessor -> CommitProcessor -> FinalRequestProcessor  感觉 processor 之间没有连起来
     @Override
     protected void setupRequestProcessors() {
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
         commitProcessor = new CommitProcessor(finalProcessor, Long.toString(getServerId()), true, getZooKeeperServerListener());
         commitProcessor.start();
+        // info：这里确实是第一个处理器链
         firstProcessor = new FollowerRequestProcessor(this, commitProcessor);
         ((FollowerRequestProcessor) firstProcessor).start();
         syncProcessor = new SyncRequestProcessor(this, new SendAckRequestProcessor(getFollower()));
@@ -83,6 +85,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
         Request request = new Request(hdr.getClientId(), hdr.getCxid(), hdr.getType(), hdr, txn, hdr.getZxid());
         request.setTxnDigest(digest);
         if ((request.zxid & 0xffffffffL) != 0) {
+            // info：在这里把 leader 提议的 request 保存，等待 leader 发送 commit 指令，之后再取出来
             pendingTxns.add(request);
         }
         syncProcessor.processRequest(request);
@@ -103,10 +106,13 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
         if (firstElementZxid != zxid) {
             LOG.error("Committing zxid 0x" + Long.toHexString(zxid)
                       + " but next pending txn 0x" + Long.toHexString(firstElementZxid));
+            // info: 如果对不上这里就强制关闭了，如何保证消息顺序？即：前后两条发送给 learner 的消息如何保证严格有序？
+            // info：leader 每发送一条就要验证 ack，超过半数了才会发下一条
             ServiceUtils.requestSystemExit(ExitCode.UNMATCHED_TXN_COMMIT.getValue());
         }
         Request request = pendingTxns.remove();
         request.logLatency(ServerMetrics.getMetrics().COMMIT_PROPAGATION_LATENCY);
+        // info：交给 CommitProcessor 处理，处理链是 CommitProcessor -> FinalRequestProcessor
         commitProcessor.commit(request);
     }
 

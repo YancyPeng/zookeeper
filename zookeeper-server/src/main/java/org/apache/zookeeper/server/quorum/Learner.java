@@ -573,7 +573,7 @@ public class Learner {
                 LOG.info("Getting a snapshot from leader 0x{}", Long.toHexString(qp.getZxid()));
                 // The leader is going to dump the database
                 // db is clear as part of deserializeSnapshot()
-                // info：清空本地的 database，使用 leader 发送过来的快照重新反序列化
+                // info：清空本地的 database，使用 leader 发送过来的快照重新反序列化，这得有多大？
                 zk.getZKDatabase().deserializeSnapshot(leaderIs);
                 // ZOOKEEPER-2819: overwrite config node content extracted
                 // from leader snapshot with local config, to avoid potential
@@ -779,6 +779,8 @@ public class Learner {
         }
         ack.setZxid(ZxidUtils.makeZxid(newEpoch, 0));
         writePacket(ack, true);
+        // info: 再次启动 server？和上面有什么区别？
+        // info：这里只是更改了一下 server 状态，并没有再次启动线程
         zk.startServing();
         /*
          * Update the election vote here to ensure that all members of the
