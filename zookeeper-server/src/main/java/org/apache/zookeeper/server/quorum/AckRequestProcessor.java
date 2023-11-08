@@ -40,6 +40,7 @@ class AckRequestProcessor implements RequestProcessor {
     /**
      * Forward the request as an ACK to the leader
      */
+    // info：这个是 leader 给自己发送 commit 请求的 processor，流程上相当于是直接给自己投了一票，省略了 ack 步骤
     public void processRequest(Request request) {
         QuorumPeer self = leader.self;
         if (self != null) {

@@ -252,7 +252,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                     requestsToProcess--;
                     if (needCommit(request) || pendingRequests.containsKey(request.sessionId)) {
                         // Add request to pending
-                        // info：如果是写请求，先放入到队列中，等待 leader 的确认
+                        // info：如果是写请求，先放入到队列中，等待 leader / follower 的确认
                         Deque<Request> requests = pendingRequests.computeIfAbsent(request.sessionId, sid -> new ArrayDeque<>());
                         requests.addLast(request);
                         ServerMetrics.getMetrics().REQUESTS_IN_SESSION_QUEUE.add(requests.size());

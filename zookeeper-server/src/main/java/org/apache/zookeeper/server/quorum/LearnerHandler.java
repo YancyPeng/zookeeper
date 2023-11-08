@@ -664,7 +664,8 @@ public class LearnerHandler extends ZooKeeperThread {
 
             // info：从这里开始结束所有的启动前工作（选举+同步），正式开始对外提供服务
             // info：这里应该只是处理 learnerHandler 发送过来的消息，client 的消息处理不在这里
-            // info：问题，在选举-同步流程还没结束前，接收到了 client 发来的请求怎么处理？
+            // info：问题：在选举-同步流程还没结束前，接收到了 client 发来的请求怎么处理？
+            // info：会因为没有启动 processor 而报错
             while (true) {
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");
@@ -688,10 +689,12 @@ public class LearnerHandler extends ZooKeeperThread {
 
                 switch (qp.getType()) {
                 case Leader.ACK:
+                    // info: 处理 learner 发过来的 ACK
                     if (this.learnerType == LearnerType.OBSERVER) {
                         LOG.debug("Received ACK from Observer {}", this.sid);
                     }
                     syncLimitCheck.updateAck(qp.getZxid());
+                    // info: 如果超过了半数，这里就进行 commit，阻塞在 commitProcessor 的 request 得以进行后续的 processor 处理
                     learnerMaster.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress());
                     break;
                 case Leader.PING:

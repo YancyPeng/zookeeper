@@ -914,10 +914,12 @@ public class Leader extends LearnerMaster {
         // in order to be committed, a proposal must be accepted by a quorum.
         //
         // getting a quorum from all necessary configurations.
+        // info: 判断是否接收到超过一半的 ack。
         if (!p.hasAllQuorums()) {
             return false;
         }
 
+        // info：到这里就说明已经可以 commit 了
         // commit proposals in order
         if (zxid != lastCommitted + 1) {
             LOG.warn(
@@ -930,6 +932,7 @@ public class Leader extends LearnerMaster {
         outstandingProposals.remove(zxid);
 
         if (p.request != null) {
+            //info：加入这个队列中，这个队列最终会在 ToBeAppliedRequestProcessor 这里被处理
             toBeApplied.add(p);
         }
 
@@ -963,9 +966,12 @@ public class Leader extends LearnerMaster {
             //turnOffFollowers();
         } else {
             p.request.logLatency(ServerMetrics.getMetrics().QUORUM_ACK_LATENCY);
+            // info：对所有的 follower 发送 commit
             commit(zxid);
+            // info：对所有的 observer 发送 inform
             inform(p);
         }
+        //info: 自己也执行 commit 操作，把当前的 request 放入到 committedRequests 队列中，让其和 queuedRequests 队列中 request 相匹配，以便匹配到的 request 进入到下一个 processor
         zk.commitProcessor.commit(p.request);
         if (pendingSyncs.containsKey(zxid)) {
             for (LearnerSyncRequest r : pendingSyncs.remove(zxid)) {
@@ -1088,6 +1094,7 @@ public class Leader extends LearnerMaster {
          * @see org.apache.zookeeper.server.RequestProcessor#processRequest(org.apache.zookeeper.server.Request)
          */
         public void processRequest(Request request) throws RequestProcessorException {
+            //info：FinalRequestProcessor
             next.processRequest(request);
 
             // The only requests that should be on toBeApplied are write

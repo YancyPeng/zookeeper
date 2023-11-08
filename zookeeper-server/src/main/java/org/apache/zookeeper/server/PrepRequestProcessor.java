@@ -677,17 +677,20 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             ttl = -1;
         }
         CreateMode createMode = CreateMode.fromFlag(flags);
+        // info：校验参数
         validateCreateRequest(path, createMode, request, ttl);
+        // info：校验 path，返回上级路径
         String parentPath = validatePathForCreate(path, request.sessionId);
 
         List<ACL> listACL = fixupACL(path, request.authInfo, acl);
         ChangeRecord parentRecord = getRecordForPath(parentPath);
-
+        // info: 检查 ACL， ACL 是什么？
         zks.checkACL(request.cnxn, parentRecord.acl, ZooDefs.Perms.CREATE, request.authInfo, path, listACL);
         int parentCVersion = parentRecord.stat.getCversion();
         if (createMode.isSequential()) {
             path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);
         }
+        // info: 检查路径是否合法
         validatePath(path, request.sessionId);
         try {
             if (getRecordForPath(path) != null) {
