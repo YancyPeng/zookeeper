@@ -126,6 +126,8 @@ public class BinaryOutputArchive implements OutputArchive {
         r.serialize(this, tag);
     }
 
+    // info：Binary 类型的，这个方法实现是空，所以在startRecord时，填不填影响都不大。
+    // info：关键是每个字段对应的 tag，如果有相同的字段，应该就要拆包
     public void startRecord(Record r, String tag) throws IOException {
     }
 

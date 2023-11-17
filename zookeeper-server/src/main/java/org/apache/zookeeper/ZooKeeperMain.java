@@ -317,6 +317,7 @@ public class ZooKeeperMain {
             connectLatch = new CountDownLatch(1);
         }
         int timeout = Integer.parseInt(cl.getOption("timeout"));
+        // info: 和 server 建立连接
         zk = new ZooKeeperAdmin(host, timeout, new MyWatcher(), readOnly, clientConfig);
         if (connectLatch != null) {
             if (!connectLatch.await(timeout, TimeUnit.MILLISECONDS)) {
@@ -362,6 +363,7 @@ public class ZooKeeperMain {
 
                 String line;
                 Method readLine = consoleC.getMethod("readLine", String.class);
+                // info: 读取命令行 command 进行处理
                 while ((line = (String) readLine.invoke(console, getPrompt())) != null) {
                     executeLine(line);
                 }

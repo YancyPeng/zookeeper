@@ -53,6 +53,8 @@ import org.slf4j.LoggerFactory;
  * This class handles communication with clients using NIO. There is one per
  * client, but only one thread doing the communication.
  */
+// info: 每个 client 连接都会 new 一个，里面保存有 client 和 server 连接的 socket 等信息，
+// info：同时，它本身还是个 watcher
 public class NIOServerCnxn extends ServerCnxn {
 
     private static final Logger LOG = LoggerFactory.getLogger(NIOServerCnxn.class);
@@ -177,7 +179,7 @@ public class NIOServerCnxn extends ServerCnxn {
             incomingBuffer.flip();
             packetReceived(4 + incomingBuffer.remaining());
             if (!initialized) {
-                //info: 读取connect请求
+                //info: 读取connect请求，如果此时 zkServer 没有启动（选举未完成），会报错
                 readConnectRequest();
             } else {
                 //info: 读取普通请求
@@ -278,6 +280,8 @@ public class NIOServerCnxn extends ServerCnxn {
              */
             directBuffer.flip();
 
+            // info：向 client 发送消息
+            // info: 如何区分多个对象？
             int sent = sock.write(directBuffer);
 
             ByteBuffer bb;
@@ -695,6 +699,7 @@ public class NIOServerCnxn extends ServerCnxn {
      *
      * @see org.apache.zookeeper.server.ServerCnxnIface#process(org.apache.zookeeper.proto.WatcherEvent)
      */
+    // info：真正处理 watch 的地方，主动给 client 发送请求
     @Override
     public void process(WatchedEvent event) {
         ReplyHeader h = new ReplyHeader(ClientCnxn.NOTIFICATION_XID, -1L, 0);

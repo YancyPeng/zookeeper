@@ -123,6 +123,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             this.selector = Selector.open();
         }
 
+        // info: 这个方法将使得阻塞的 selector.select() 方法理解返回
         public void wakeupSelector() {
             selector.wakeup();
         }
@@ -380,11 +381,12 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             try {
                 while (!stopped) {
                     try {
-                        //info: 收集接受到的数据，什么都没注册，第一条数据从哪儿来？
+                        //info: 收集接受到的数据，什么都没注册，第一条数据从哪儿来？？
+                        //info：当 accept 请求进来的时候，会手动进行 wakeup，这样 select() 方法就会立即返回，处理接下来的 connect 请求，只有 connected 之后，才会有后续的请求
                         select();
                         //info: 处理连接请求
                         processAcceptedConnections();
-                        // info： 通过updateQueue队列异步处理处理selectorKey的状态
+                        // info： 通过 updateQueue 队列异步处理处理 selectorKey 的状态
                         processInterestOpsUpdateRequests();
                     } catch (RuntimeException e) {
                         LOG.warn("Ignoring unexpected runtime exception", e);
@@ -418,7 +420,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
         private void select() {
             try {
-                // info： 阻塞方法，阻塞到至少有一个通道准备好，范围是registered的各个channel设置的interestOps
+                // info： 阻塞方法，阻塞到至少有一个通道准备好，范围是 registered 的各个 channel 设置的 interestOps
                 selector.select();
 
                 Set<SelectionKey> selected = selector.selectedKeys();
@@ -457,7 +459,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
             // Stop selecting this key while processing on its
             // connection
-            //info： 临时设置当前selectionKey在之后的select中不可选
+            //info： 临时设置当前 selectionKey 在之后的 select 中不可选
             cnxn.disableSelectable();
             // info: 设置对什么操作都不感兴趣
             key.interestOps(0);
@@ -551,7 +553,8 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             // Push an update request on the queue to resume selecting
             // on the current set of interest ops, which may have changed
             // as a result of the I/O operations we just performed.
-            // info：这里处理完当前IO之后，把cnxn的selectable状态重新设置为true，同时将当前的selectionKey放入updateQueue异步队列中，准备修改readyOps值
+            // info：这里处理完当前IO之后，把cnxn的 selectable 状态重新设置为 true，为 true 意味着什么？
+            // info： 同时将当前的selectionKey放入updateQueue异步队列中，准备修改readyOps值
             if (!selectorThread.addInterestOpsUpdateRequest(key)) {
                 cnxn.close(ServerCnxn.DisconnectReason.CONNECTION_MODE_CHANGED);
             }

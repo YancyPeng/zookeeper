@@ -134,6 +134,7 @@ public class BinaryInputArchive implements InputArchive {
         r.deserialize(this, tag);
     }
 
+    // info：Binary 这里什么都没有做，所以设置不设置 tag 完全没用！
     public void startRecord(String tag) throws IOException {
     }
 

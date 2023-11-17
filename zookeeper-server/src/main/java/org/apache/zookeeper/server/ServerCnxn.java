@@ -196,6 +196,7 @@ public abstract class ServerCnxn implements Stats, Watcher {
     protected byte[] serializeRecord(Record record) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(ZooKeeperServer.intBufferStartingSizeBytes);
         BinaryOutputArchive bos = BinaryOutputArchive.getArchive(baos);
+        // info: 为什么是 null ？
         bos.writeRecord(record, null);
         return baos.toByteArray();
     }
@@ -254,9 +255,12 @@ public abstract class ServerCnxn implements Stats, Watcher {
         int bufferLen = data != null ? 3 : 2;
         ByteBuffer[] buffers = new ByteBuffer[bufferLen];
 
+        // info：请求头和请求体的长度，4个字节
         buffers[0] = lengthBuffer;
+        // info: 请求头
         buffers[1] = ByteBuffer.wrap(header);
         if (data != null) {
+            // info: 请求体
             buffers[2] = ByteBuffer.wrap(data);
         }
         return buffers;

@@ -704,6 +704,8 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             throw new KeeperException.NoChildrenForEphemeralsException(path);
         }
         int newCversion = parentRecord.stat.getCversion() + 1;
+
+        // info：把 request 中的 record 反序列化出来，set 到 request中
         if (type == OpCode.createContainer) {
             request.setTxn(new CreateContainerTxn(path, data, listACL, newCversion));
         } else if (type == OpCode.createTTL) {
@@ -774,7 +776,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         request.setHdr(null);
         request.setTxn(null);
 
-        //info: 如果是一些变更操作，在这里会获取变更节点的parent和child，更新相关信息
+        //info: 如果是一些变更操作，在这里会获取变更节点的parent和child，校验 path，更新相关信息
         try {
             switch (request.type) {
             case OpCode.createContainer:

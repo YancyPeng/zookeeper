@@ -464,6 +464,7 @@ public class DataTree {
      * @throws NodeExistsException
      * @throws NoNodeException
      */
+    // info：处理 create request
     public void createNode(final String path, byte[] data, List<ACL> acl, long ephemeralOwner, int parentCVersion, long zxid, long time, Stat outputStat) throws KeeperException.NoNodeException, KeeperException.NodeExistsException {
         int lastSlash = path.lastIndexOf('/');
         String parentName = path.substring(0, lastSlash);
@@ -550,6 +551,8 @@ public class DataTree {
             updateCountBytes(lastPrefix, bytes, 1);
         }
         updateWriteStat(path, bytes);
+
+        // info: 通知 watcher，path 有变更动作
         dataWatches.triggerWatch(path, Event.EventType.NodeCreated);
         childWatches.triggerWatch(parentName.equals("") ? "/" : parentName, Event.EventType.NodeChildrenChanged);
     }
@@ -716,6 +719,7 @@ public class DataTree {
         synchronized (n) {
             n.copyStat(stat);
             if (watcher != null) {
+                // info：在这里添加该 path 的 watcher
                 dataWatches.addWatch(path, watcher);
             }
             data = n.data;
@@ -873,7 +877,9 @@ public class DataTree {
         return this.processTxn(header, txn, false);
     }
 
+    // info：处理事务请求
     public ProcessTxnResult processTxn(TxnHeader header, Record txn, boolean isSubTxn) {
+        // info: 将要返回的 result
         ProcessTxnResult rc = new ProcessTxnResult();
 
         try {

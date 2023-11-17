@@ -83,6 +83,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount.getAndIncrement();
                     readLength();
                 } else if (!initialized) {
+                    // info: 如果还没有初始化，在这里进行连接初始化
                     readConnectResult();
                     enableRead();
                     if (findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()) != null) {
@@ -95,6 +96,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastHeard();
                     initialized = true;
                 } else {
+                    // info：处理 server 的 response
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -103,6 +105,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
         }
         if (sockKey.isWritable()) {
+            // info: 从 outgoingQueue 取出需要发送给 server 的信息，包括连接需要的信息
             Packet p = findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress());
 
             if (p != null) {
@@ -120,16 +123,19 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (!p.bb.hasRemaining()) {
                     sentCount.getAndIncrement();
                     outgoingQueue.removeFirstOccurrence(p);
+                    // info：心跳检测的 header 就是 null，不需要放入到 pendingQueue 中来
                     if (p.requestHeader != null
                         && p.requestHeader.getType() != OpCode.ping
                         && p.requestHeader.getType() != OpCode.auth) {
                         synchronized (pendingQueue) {
+                            //info: 把发送的 packet 放入到 pendingQueue 中
                             pendingQueue.add(p);
                         }
                     }
                 }
             }
             if (outgoingQueue.isEmpty()) {
+                // info: 全部发完了，关闭写？没理解，发完了不应该可以继续写吗？匪夷所思的逻辑
                 // No more packets to send: turn off write interest flag.
                 // Will be turned on later by a later call to enableWrite(),
                 // from within ZooKeeperSaslClient (if client is configured
@@ -146,6 +152,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 // TCP stack may choose to abort with RST, in which case the
                 // client would never receive the session expired event.  See
                 // http://docs.oracle.com/javase/6/docs/technotes/guides/net/articles/connection_release.html
+                // info: 如果还未建立连接，取消 write 事件，等待 server 的响应
                 disableWrite();
             } else {
                 // Just in case
@@ -256,9 +263,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws IOException
      */
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) throws IOException {
+
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
+        //info: sock 连接是非阻塞的，即使没有连接也会迅速返回
         boolean immediateConnect = sock.connect(addr);
         if (immediateConnect) {
+            // info: 建立连接
             sendThread.primeConnection();
         }
     }
@@ -341,6 +351,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
+                // info： 如果还没有建立连接，这里会抛异常
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     updateSocketAddresses();
@@ -352,6 +363,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
         if (sendThread.getZkState().isConnected()) {
             if (findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()) != null) {
+                //info: 在下一次轮询时，如果 outgoingQueue 不是 empty，设置对 write 感兴趣
                 enableWrite();
             }
         }

@@ -1088,6 +1088,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
         loadDataBase();
         // info: 启动接受 client 连接和其他请求的 socket，怎么比选举还要早？如果请求时间比选举结束时间早怎么处理？
+        // info: 会报错
         startServerCnxnFactory();
         try {
             adminServer.start();

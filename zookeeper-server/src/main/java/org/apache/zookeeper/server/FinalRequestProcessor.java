@@ -121,7 +121,7 @@ public class FinalRequestProcessor implements RequestProcessor {
             ZooTrace.logRequest(LOG, traceMask, 'E', request, "");
         }
 
-        //info: 处理一些update/create等操作，这里的信息是在PrepRequestProcessor里放进去的
+        //info: 处理一些update/create等操作，这里的信息是在PrepRequestProcessor里放进去的，最终返回的时候，事务消息都要用到这个 response
         ProcessTxnResult rc = zks.processTxn(request);
 
         // ZOOKEEPER-558:
@@ -350,6 +350,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 err = Code.get(rc.err);
                 break;
             }
+            // info：非事务消息，这些都可以设置 watcher
             case OpCode.exists: {
                 lastOp = "EXIS";
                 // TODO we need to figure out the security requirement for this!
@@ -590,11 +591,11 @@ public class FinalRequestProcessor implements RequestProcessor {
         updateStats(request, lastOp, lastZxid);
 
         try {
-            // 如果不是get请求，只需要返回ReplyHeader
+            //info: 如果不是get请求，只需要返回ReplyHeader
             if (path == null || rsp == null) {
                 cnxn.sendResponse(hdr, rsp, "response");
             } else {
-                // 否则需要填充 response 信息
+                //info: 否则需要填充 response 信息
                 int opCode = request.type;
                 Stat stat = null;
                 // Serialized read and get children responses could be cached by the connection

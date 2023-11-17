@@ -43,8 +43,10 @@ public class WatchManager implements IWatchManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
 
+    // info：<path , watchers>>
     private final Map<String, Set<Watcher>> watchTable = new HashMap<>();
 
+    // info: <watcher, paths>
     private final Map<Watcher, Set<String>> watch2Paths = new HashMap<>();
 
     private final WatcherModeManager watcherModeManager = new WatcherModeManager();
@@ -144,12 +146,14 @@ public class WatchManager implements IWatchManager {
                             iterator.remove();
                             Set<String> paths = watch2Paths.get(watcher);
                             if (paths != null) {
+                                // info: 如果 watcher 不是持久的，在这里会删除
                                 paths.remove(localPath);
                             }
                         }
                     }
                 }
                 if (thisWatchers.isEmpty()) {
+                    // info: 如果 watcher 不是持久的，在这里会删除
                     watchTable.remove(localPath);
                 }
             }
