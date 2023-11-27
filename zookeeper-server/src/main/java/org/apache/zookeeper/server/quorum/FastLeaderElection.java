@@ -1001,6 +1001,7 @@ public class FastLeaderElection implements Election {
                     notTimeout = Math.min(tmpTimeOut, maxNotificationInterval);
                     LOG.info("Notification time out: {}", notTimeout);
                 } else if (validVoter(n.sid) && validVoter(n.leader)) {
+                    // info: OBSERVER 一开始选自己，是进不了这里的，他只能被动接受 PARTICIPANT 的投票过程和结果
                     /*
                      * Only proceed if the vote comes from a replica in the current or next
                      * voting view for a replica in the current or next voting view.

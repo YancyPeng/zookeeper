@@ -1517,6 +1517,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                         }
                         updateServerState();
                     }
+                    // info: 这里的 break 跳出的是 switch case，跳出后 由于 while(running)，会重新开始选举
                     break;
                 }
             }
